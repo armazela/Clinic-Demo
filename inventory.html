@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>მარაგები – კლინიკა</title>
+<style>
+:root{--bg:#f3f7f6;--card:#fff;--ink:#17302e;--mute:#64807c;--line:#dbe6e3;--brand:#0f766e;
+--ok:#15803d;--okbg:#dcfce7;--low:#c2410c;--lowbg:#ffedd5;--out:#b91c1c;--outbg:#fee2e2}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans Georgian","BPG Nino Mtavruli",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--brand);color:#fff;padding:10px 16px}
+.top b{font-size:18px;margin-right:auto}
+.top a,.top button{color:#fff;background:rgba(255,255,255,.15);border:0;border-radius:8px;padding:7px 12px;font:inherit;font-size:14px;text-decoration:none;cursor:pointer}
+.top a.on{background:#fff;color:var(--brand)}
+main{max-width:1000px;margin:auto;padding:16px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;font:inherit;cursor:pointer}
+.tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+button:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.banner{background:var(--lowbg);color:var(--low);border:1px solid #fdba74;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.bar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.bar label{font-size:14px;display:flex;gap:6px;align-items:center}
+.note{font-size:13px;color:var(--mute);margin:12px 0 0}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px}
+th{font-size:13px;color:var(--mute);font-weight:600}
+.badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600}
+.OK{background:var(--okbg);color:var(--ok)}.LOW{background:var(--lowbg);color:var(--low)}.OUT{background:var(--outbg);color:var(--out)}
+tr.due td{background:var(--lowbg)}
+.ord{border:0;background:var(--brand);color:#fff;border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#17302e;color:#fff;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:.25s;font-size:14px;max-width:90vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+[hidden]{display:none!important}
+@media(max-width:600px){main{padding:10px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <b>კლინიკა · მარაგები</b>
+  <a href="staff.html">გრაფიკი</a>
+  <a class="on" href="inventory.html">მარაგები</a>
+  <button id="reset">Reset</button>
+</header>
+<main>
+  <div class="tabs" role="tablist">
+    <button class="on" data-tab="stock" role="tab">მარაგები</button>
+    <button data-tab="equip" role="tab">აპარატურა</button>
+  </div>
+
+  <div class="card" id="stock">
+    <div id="banner" class="banner" hidden></div>
+    <div class="bar">
+      <label><input type="checkbox" id="onlyLow"> მხოლოდ დაბალი</label>
+    </div>
+    <div class="wrap"><table>
+      <thead><tr><th>მასალა</th><th>რაოდენობა</th><th>მინიმუმი</th><th>სტატუსი</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <p class="note">ვიზიტის შენახვისას გამოყენებული მასალა ავტომატურად აკლდება მარაგს</p>
+  </div>
+
+  <div class="card" id="equip" hidden>
+    <div class="wrap"><table>
+      <thead><tr><th>აპარატი</th><th>კაბინეტი</th><th>ბოლო სერვისი</th><th>შემდეგი სერვისი</th></tr></thead>
+      <tbody id="devs"></tbody>
+    </table></div>
+    <p class="note">ნარინჯისფრად აღნიშნულია აპარატები, რომელთა სერვისი 14 დღეში იწურება.</p>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<script>
+const MATS=[
+['ხელთათმანები (ლატექსი)',240,100,'ც'],['შპრიცები 5 მლ',35,80,'ც'],['შპრიცები 10 მლ',120,60,'ც'],
+['ანესთეზიის კრემი',4,6,'ტუბი'],['ჰიალურონის მჟავა',12,5,'ამპ.'],['ბოტულოტოქსინი',0,3,'ფლაკ.'],
+['სამედიცინო ნიღბები',500,200,'ც'],['სპირტიანი ტამპონები',900,400,'ც'],['ანტისეპტიკი 1 ლ',3,4,'ბოთლი'],
+['გელი ულტრაბგერისთვის',9,4,'ბოთლი'],['ლაზერის დამცავი სათვალე',14,6,'ც'],['ბამბა სტერილური',22,15,'შეკ.'],
+['ნემსები 30G',60,150,'ც'],['თავსაფრები ერთჯერადი',300,120,'ც'],['დამამშვიდებელი კრემი',0,5,'ტუბი']];
+const DEVS=[
+['დიოდური ლაზერი','კაბინეტი 1',-120,10],['ულტრაბგერითი აპარატი','კაბინეტი 2',-90,45],['RF ლიფტინგი','კაბინეტი 3',-170,5],
+['კრიოლიპოლიზი','კაბინეტი 3',-60,120],['მეზოთერაპიის პისტოლეტი','კაბინეტი 1',-100,12],['ავტოკლავი','სტერილიზაცია',-30,150],
+['დერმატოსკოპი','კაბინეტი 2',-150,20],['ოზონ-თერაპია','კაბინეტი 4',-45,13]];
+let stock=MATS.map(m=>m.slice());
+const st=m=>m[1]===0?'OUT':m[1]<m[2]?'LOW':'OK';
+const LBL={OK:'OK',LOW:'დაბალი',OUT:'ამოწურული'};
+const $=id=>document.getElementById(id);
+const fmt=d=>d.toLocaleDateString('ka-GE',{day:'2-digit',month:'2-digit',year:'numeric'});
+const off=n=>{const d=new Date();d.setDate(d.getDate()+n);return d};
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),2200)}
+function renderStock(){
+  const low=stock.filter(m=>st(m)!=='OK').length;
+  $('banner').hidden=!low;
+  $('banner').textContent=`⚠ ყურადღება: ${low} მასალა მარაგში დაბალია ან ამოწურულია`;
+  $('rows').innerHTML=stock.map((m,i)=>[m,i]).filter(([m])=>!$('onlyLow').checked||st(m)!=='OK').map(([m,i])=>`
+    <tr><td>${m[0]}</td><td>${m[1]} ${m[3]}</td><td>${m[2]} ${m[3]}</td>
+    <td><span class="badge ${st(m)}">${LBL[st(m)]}</span></td>
+    <td><button class="ord" data-i="${i}">შეკვეთა</button></td></tr>`).join('');
+}
+function renderDevs(){
+  $('devs').innerHTML=DEVS.map(d=>`<tr class="${d[3]<=14?'due':''}"><td>${d[0]}</td><td>${d[1]}</td><td>${fmt(off(d[2]))}</td><td><b>${fmt(off(d[3]))}</b>${d[3]<=14?' · '+d[3]+' დღეში':''}</td></tr>`).join('');
+}
+$('onlyLow').onchange=renderStock;
+$('rows').onclick=e=>{const b=e.target.closest('.ord');if(b)toast(`შეკვეთა გაიგზავნა: ${stock[b.dataset.i][0]}`)};
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  $('stock').hidden=b.dataset.tab!=='stock';$('equip').hidden=b.dataset.tab!=='equip'});
+$('reset').onclick=()=>{stock=MATS.map(m=>m.slice());$('onlyLow').checked=false;renderStock();toast('დემო თავიდან დაიწყო')};
+renderStock();renderDevs();
+</script>
+</body>
+</html>
